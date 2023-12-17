@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SplittingMethod {
+  EQUAL
+  EQUAL_WITH_CUSTOM_ADJUSTMENT
+  PERCENTAGE
+  CUSTOM_AMOUNT
+}
+
+enum ParticipantTag {
+  PARTICIPANT
+  PAYER
+}
+
+model Event {
+  id               Int                @id @default(autoincrement())
+  name             String
+  description      String?
+  start_date       DateTime
+  end_date         DateTime
+  slug             String             @unique
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  EventParticipant EventParticipant[]
+  Expense          Expense[]
+
+  @@index([slug], name: "events_slug_unique")
+  @@map("events")
+}
+
+model Participant {
+  id                 String               @id @default(uuid())
+  name               String
+  slug               String               @unique
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  EventParticipant   EventParticipant[]
+  ExpenseParticipant ExpenseParticipant[]
+
+  @@index([slug], name: "participants_slug_unique")
+  @@map("participants")
+}
+
+model EventParticipant {
+  id               Int         @id @default(autoincrement())
+  event_id         Int
+  participant_id   String
+  is_event_creator Boolean     @default(false)
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
+  event            Event       @relation(fields: [event_id], references: [id])
+  participant      Participant @relation(fields: [participant_id], references: [id])
+
+  @@unique([event_id, participant_id], name: "event_participants_event_id_participant_id_unique")
+  @@unique([participant_id, event_id], name: "event_participants_participant_id_event_id_unique")
+  @@index([event_id], name: "event_participants_event_id_index")
+  @@index([participant_id], name: "event_participants_participant_id_index")
+  @@map("event_participants")
+}
+
+model Expense {
+  id                 Int                  @id @default(autoincrement())
+  name               String
+  description        String?
+  start_date         DateTime
+  end_date           DateTime
+  amount             BigInt
+  tax                BigInt               @default(0)
+  service_fee        BigInt               @default(0)
+  discount           BigInt               @default(0)
+  splitting_method   SplittingMethod      @default(EQUAL)
+  payment_proof_path String?
+  event_id           Int
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  event              Event                @relation(fields: [event_id], references: [id])
+  ExpenseParticipant ExpenseParticipant[]
+
+  @@index([event_id], name: "expenses_event_id_index")
+  @@map("expenses")
+}
+
+model ExpenseParticipant {
+  id                 Int            @id @default(autoincrement())
+  expense_id         Int
+  participant_id     String
+  tag                ParticipantTag @default(PARTICIPANT)
+  pay_amount         BigInt         @default(0)
+  payed_amount       BigInt         @default(0)
+  payed_at           DateTime?
+  payment_proof_path String?
+  created_at         DateTime       @default(now())
+  updated_at         DateTime       @updatedAt
+  expense            Expense        @relation(fields: [expense_id], references: [id])
+  participant        Participant    @relation(fields: [participant_id], references: [id])
+
+  @@unique([expense_id, participant_id], name: "expense_participants_expense_id_participant_id_unique")
+  @@unique([participant_id, expense_id], name: "expense_participants_participant_id_expense_id_unique")
+  @@index([expense_id], name: "expense_participants_expense_id_index")
+  @@index([participant_id], name: "expense_participants_participant_id_index")
+  @@map("expense_participants")
+}

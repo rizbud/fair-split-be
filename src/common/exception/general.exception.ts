@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { ErrorResponse } from '../interface';
+import { getReasonPhrase } from 'http-status-codes';
 
 interface GeneralExceptionInput {
   status: HttpStatus | number;
@@ -12,11 +13,11 @@ export class GeneralException extends HttpException {
     const response: ErrorResponse = {
       response: {
         code: status,
-        message: HttpStatus[status],
+        message: getReasonPhrase(status),
       },
       data: {
         error_code: code,
-        message: message ?? HttpStatus[status],
+        message: message ?? getReasonPhrase(status),
       },
     };
 

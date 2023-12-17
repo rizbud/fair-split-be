@@ -24,8 +24,8 @@ export class AppController {
 
   @Get('http-status')
   getHttpStatus(@Query() query): ResponseData<string> {
-    const code = Number(query.code ?? 400);
-    const errorCode = Number(query.error_code ?? 400);
+    const code = Number(query.code ?? 200);
+    const errorCode = Number(query.error_code ?? code);
     const message = query.message;
 
     throw new GeneralException({
