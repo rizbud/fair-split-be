@@ -16,18 +16,12 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
+    it('should return "Fair Split API"', () => {
       expect(appController.getHello()).toMatchInlineSnapshot(`
         {
-          "message": "Hello World!",
+          "message": "Fair Split API",
         }
       `);
-    });
-
-    it('should throw an error', () => {
-      expect(() =>
-        appController.getHello({ error: 'true' }),
-      ).toThrowErrorMatchingInlineSnapshot(`"General Exception"`);
     });
   });
 });

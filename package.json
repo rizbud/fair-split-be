@@ -76,7 +76,11 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "lodash-es": "lodash"
-    }
+      "lodash-es": "lodash",
+      "^~/(.*)$": "<rootDir>/$1"
+    },
+    "modulePaths": [
+      "<rootDir>"
+    ]
   }
 }

@@ -5,6 +5,29 @@ interface ErrorData {
   message: string; // Custom Error Message or HTTP Status Message
 }
 
+export interface Pagination {
+  page: number;
+  limit: number;
+  totalPage?: number;
+  totalData?: number;
+}
+
+export interface CursorPagination {
+  limit: number;
+  nextCursor?: string;
+  prevCursor?: string;
+}
+
+export interface PaginatedData<T = Data> {
+  data: ReadonlyArray<T>;
+  pagination: Pagination;
+}
+
+export interface CursorPaginatedData<T = Data> {
+  data: ReadonlyArray<T>;
+  pagination: CursorPagination;
+}
+
 export interface BaseResponse<T = Data> {
   response: {
     code: number; // HTTP Status Code
@@ -16,15 +39,11 @@ export interface BaseResponse<T = Data> {
 export type ErrorResponse = BaseResponse<ErrorData>;
 
 export interface PaginatedResponse<T = Data>
-  extends BaseResponse<ReadonlyArray<T>> {
-  pagination: {
-    page: number;
-    limit: number;
-    totalPage: number;
-    totalData: number;
-  };
+  extends BaseResponse<PaginatedData<T>> {
+  pagination?: Pagination;
 }
 
-export type ResponseData<T = Data> = BaseResponse<T> | ErrorResponse;
-
-export type ResponsePagination<T = Data> = PaginatedResponse<T> | ErrorResponse;
+export interface CursorPaginatedResponse<T = Data>
+  extends BaseResponse<CursorPaginatedData<T>> {
+  pagination?: CursorPagination;
+}
