@@ -5,7 +5,7 @@ interface ErrorData {
   message: string; // Custom Error Message or HTTP Status Message
 }
 
-interface BaseResponse<T = Data> {
+export interface BaseResponse<T = Data> {
   response: {
     code: number; // HTTP Status Code
     message: string; // HTTP Status Message

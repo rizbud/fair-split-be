@@ -1,38 +1,21 @@
-import { Controller, Get, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 
 import { AppService } from './app.service';
-import { mapToSnakeCase } from './common/utils';
-
 import { GeneralException } from './common/exception';
-import type { ResponseData } from './common/interface';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): ResponseData<string> {
+  getHello(@Query() query?: Record<string, string>): Record<string, string> {
+    const isError = query?.error;
+    if (isError === 'true') throw new GeneralException();
+
     const hello = this.appService.getHello();
 
-    return mapToSnakeCase({
-      response: {
-        code: 200,
-        message: 'OK',
-      },
-      data: hello,
-    });
-  }
-
-  @Get('http-status')
-  getHttpStatus(@Query() query): ResponseData {
-    const code = Number(query.code ?? 200);
-    const errorCode = Number(query.error_code ?? code);
-    const message = query.message;
-
-    throw new GeneralException({
-      status: code in HttpStatus ? code : 400,
-      code: code < 400 ? undefined : errorCode,
-      message,
-    });
+    return {
+      message: hello,
+    };
   }
 }
