@@ -1,6 +1,9 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { ErrorResponse } from '../interface';
 import { getReasonPhrase } from 'http-status-codes';
+
+import { mapToSnakeCase } from '../utils';
+
+import type { ErrorResponse } from '../interface';
 
 interface GeneralExceptionInput {
   status: HttpStatus | number;
@@ -16,11 +19,11 @@ export class GeneralException extends HttpException {
         message: getReasonPhrase(status),
       },
       data: {
-        error_code: code,
+        errorCode: code,
         message: message ?? getReasonPhrase(status),
       },
     };
 
-    super(response, status);
+    super(mapToSnakeCase(response), status);
   }
 }

@@ -1,6 +1,7 @@
 import { Controller, Get, HttpStatus, Query } from '@nestjs/common';
 
 import { AppService } from './app.service';
+import { mapToSnakeCase } from './common/utils';
 
 import { GeneralException } from './common/exception';
 import type { ResponseData } from './common/interface';
@@ -13,17 +14,17 @@ export class AppController {
   getHello(): ResponseData<string> {
     const hello = this.appService.getHello();
 
-    return {
+    return mapToSnakeCase({
       response: {
         code: 200,
         message: 'OK',
       },
       data: hello,
-    };
+    });
   }
 
   @Get('http-status')
-  getHttpStatus(@Query() query): ResponseData<string> {
+  getHttpStatus(@Query() query): ResponseData {
     const code = Number(query.code ?? 200);
     const errorCode = Number(query.error_code ?? code);
     const message = query.message;

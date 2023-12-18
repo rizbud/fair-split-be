@@ -5,6 +5,8 @@ import {
   HttpException,
 } from '@nestjs/common';
 
+import { mapToSnakeCase } from '../utils';
+
 import type { ErrorResponse } from '../interface';
 
 @Catch(HttpException)
@@ -22,11 +24,11 @@ export class HttpExceptionFilter implements ExceptionFilter<HttpException> {
         message: error,
       },
       data: data ?? {
-        error_code: status,
+        errorCode: status,
         message,
       },
     };
 
-    res.status(status).json(responseJson);
+    res.status(status).json(mapToSnakeCase(responseJson));
   }
 }

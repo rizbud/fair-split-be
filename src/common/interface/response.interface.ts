@@ -1,7 +1,7 @@
 type Data = Record<string, any>;
 
 interface ErrorData {
-  error_code: number; // Custom Error Code or HTTP Status Code
+  errorCode: number; // Custom Error Code or HTTP Status Code
   message: string; // Custom Error Message or HTTP Status Message
 }
 
@@ -20,8 +20,8 @@ export interface PaginatedResponse<T = Data>
   pagination: {
     page: number;
     limit: number;
-    total_page: number;
-    total_data: number;
+    totalPage: number;
+    totalData: number;
   };
 }
 

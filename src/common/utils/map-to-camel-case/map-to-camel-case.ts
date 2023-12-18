@@ -1,6 +1,9 @@
-import { camelCase, isArray, isObject, transform } from 'lodash-es';
+import { camelCase, isArray, isObject, transform } from 'lodash';
 
-export const mapToCamelCase = <T = Record<string, unknown>>(obj: object): T => {
+type input = Record<string, any>;
+type output = Record<string, any>;
+
+export const mapToCamelCase = <T = output>(obj: input): T => {
   return transform(obj, (acc: Record<string, object>, value, key, target) => {
     const camelKey = isArray(target) ? key : camelCase(key);
 
