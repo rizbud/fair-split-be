@@ -8,8 +8,8 @@ interface ErrorData {
 export interface Pagination {
   page: number;
   limit: number;
-  totalPage?: number;
-  totalData?: number;
+  totalPage: number;
+  totalData: number;
 }
 
 export interface CursorPagination {

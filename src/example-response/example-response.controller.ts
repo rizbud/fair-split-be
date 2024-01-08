@@ -8,9 +8,10 @@ import {
 } from '~/common/interceptors';
 import type {
   CursorPaginatedData,
-  CursorPagination,
+  CursorPaginationInput,
   PaginatedData,
   Pagination,
+  PaginationInput,
 } from '~/common/interface';
 
 @Controller('example-response')
@@ -26,7 +27,7 @@ export class ExampleResponseController {
 
   @Get('pagination')
   @UseInterceptors(PaginatedResponseInterceptor)
-  getPagination(@Query() query?: Pagination): PaginatedData {
+  getPagination(@Query() query?: PaginationInput): PaginatedData {
     const { page = 1, limit = 10 } = query ?? {};
 
     return {
@@ -51,7 +52,9 @@ export class ExampleResponseController {
 
   @Get('cursor-pagination')
   @UseInterceptors(CursorPaginatedResponseInterceptor)
-  getCursorPagination(@Query() query?: CursorPagination): CursorPaginatedData {
+  getCursorPagination(
+    @Query() query?: CursorPaginationInput,
+  ): CursorPaginatedData {
     const { limit = 10 } = query ?? {};
 
     return {
