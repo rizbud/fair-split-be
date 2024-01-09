@@ -14,7 +14,7 @@ import { GeneralException } from '~/common/exception';
 import { BaseResponseInterceptor } from '~/common/interceptors';
 
 import { EventService } from './event.service';
-import { EventPayload } from './event.type';
+import { EventPayload, ParticipateEventPayload } from './event.type';
 
 @Controller('events')
 export class EventController {
@@ -30,10 +30,10 @@ export class EventController {
     this.logger.log(`createEvent: ${JSON.stringify(body)}`);
 
     if (
-      !name.trim() ||
-      !start_date.trim() ||
-      !end_date.trim() ||
-      !creator_name.trim()
+      !name?.trim() ||
+      !start_date?.trim() ||
+      !end_date?.trim() ||
+      !creator_name?.trim()
     ) {
       const missingFields = [];
       Object.entries({
@@ -41,7 +41,7 @@ export class EventController {
         start_date,
         end_date,
         creator_name,
-      }).forEach(([key, value]) => !value.trim() && missingFields.push(key));
+      }).forEach(([key, value]) => !value?.trim() && missingFields.push(key));
 
       throw new GeneralException(
         400,
@@ -76,10 +76,10 @@ export class EventController {
     this.logger.log(`getEventBySlug: ${slug}`);
 
     try {
-      const data = await this.eventService.getEventBySlug(slug);
-      if (!data) throw new GeneralException(404, 'Event not found');
+      const event = await this.eventService.getEventBySlug(slug);
+      if (!event) throw new GeneralException(404, 'Event not found');
 
-      return data;
+      return event;
     } catch (error) {
       if (error instanceof GeneralException) throw error;
       this.logger.error(`Error to getEventBySlug: ${error}`);
@@ -93,13 +93,48 @@ export class EventController {
     this.logger.log(`getEventParticipantsBySlug: ${slug}`);
 
     try {
-      const data = await this.eventService.getEventParticipantsBySlug(slug);
-      if (!data.length) throw new GeneralException(404, 'Event not found');
+      const participants = await this.eventService.getEventParticipantsBySlug(
+        slug,
+      );
+      if (!participants.length)
+        throw new GeneralException(404, 'Event not found');
 
-      return data;
+      return participants;
     } catch (error) {
       if (error instanceof GeneralException) throw error;
       this.logger.error(`Error to getEventParticipantsBySlug: ${error}`);
+      throw new GeneralException(500, error.message);
+    }
+  }
+
+  @Post(':slug/participate')
+  @UseInterceptors(BaseResponseInterceptor)
+  async participateEvent(
+    @Param('slug') slug: string,
+    @Body() body: ParticipateEventPayload,
+  ) {
+    this.logger.log(`participateEvent: ${JSON.stringify({ slug, body })}`);
+
+    const { participant_name } = body || {};
+
+    if (!participant_name?.trim()) {
+      throw new GeneralException(
+        400,
+        'Missing required field (participant_name)',
+      );
+    }
+
+    try {
+      const participant = await this.eventService.participateEvent(
+        slug,
+        participant_name,
+      );
+      if (!participant) throw new GeneralException(404, 'Event not found');
+
+      return participant;
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to participateEvent: ${error}`);
       throw new GeneralException(500, error.message);
     }
   }

@@ -78,7 +78,10 @@ describe('EventService', () => {
         include: { EventParticipant: { select: { participant: true } } },
       });
 
-      expect(result).toEqual({ event, participant });
+      expect(result).toEqual({
+        event,
+        participant: { ...participant, is_event_creator: true },
+      });
     });
 
     it('should throw an error if there is an error creating the event', async () => {
@@ -124,7 +127,7 @@ describe('EventService', () => {
     const slug = 'test-event';
 
     it('should return event participants by slug', async () => {
-      const eventParticipants = [{ participant }];
+      const eventParticipants = [{ participant, is_event_creator: true }];
 
       prismaService.eventParticipant.findMany = jest
         .fn()
@@ -134,13 +137,14 @@ describe('EventService', () => {
 
       expect(prismaService.eventParticipant.findMany).toHaveBeenCalledWith({
         where: { event: { slug } },
-        select: { participant: true },
+        select: { participant: true, is_event_creator: true },
       });
 
       expect(result).toEqual(
-        eventParticipants.map(
-          (eventParticipant) => eventParticipant.participant,
-        ),
+        eventParticipants.map((eventParticipant) => ({
+          ...eventParticipant.participant,
+          is_event_creator: eventParticipant.is_event_creator,
+        })),
       );
     });
 
@@ -152,6 +156,90 @@ describe('EventService', () => {
       await expect(service.getEventParticipantsBySlug(slug)).rejects.toThrow(
         'Failed to get event participants',
       );
+    });
+  });
+
+  describe('participateEvent', () => {
+    const slug = 'test-event';
+    const name = 'John Doe';
+
+    it('should participate in an event', async () => {
+      prismaService.event.findUnique = jest.fn().mockResolvedValue(event);
+      prismaService.participant.create = jest
+        .fn()
+        .mockResolvedValue(participant);
+
+      const result = await service.participateEvent(slug, name);
+
+      expect(prismaService.event.findUnique).toHaveBeenCalledWith({
+        where: { slug },
+      });
+
+      expect(prismaService.participant.create).toHaveBeenCalledWith({
+        data: {
+          name: name.trim(),
+          slug: expect.any(String),
+          EventParticipant: {
+            create: { event: { connect: { id: event.id } } },
+          },
+        },
+      });
+
+      expect(result).toEqual({
+        ...participant,
+        is_event_creator: false,
+      });
+    });
+
+    it('should return null if event is not found', async () => {
+      prismaService.event.findUnique = jest.fn().mockResolvedValue(null);
+
+      const result = await service.participateEvent(slug, name);
+
+      expect(prismaService.event.findUnique).toHaveBeenCalledWith({
+        where: { slug },
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw an error if there is an error finding the event', async () => {
+      prismaService.event.findUnique = jest
+        .fn()
+        .mockRejectedValue(new Error('Failed to find event'));
+
+      await expect(service.participateEvent(slug, name)).rejects.toThrow(
+        'Failed to find event',
+      );
+
+      expect(prismaService.event.findUnique).toHaveBeenCalledWith({
+        where: { slug },
+      });
+    });
+
+    it('should throw an error if there is an error creating the participant', async () => {
+      prismaService.event.findUnique = jest.fn().mockResolvedValue(event);
+      prismaService.participant.create = jest
+        .fn()
+        .mockRejectedValue(new Error('Failed to create participant'));
+
+      await expect(service.participateEvent(slug, name)).rejects.toThrow(
+        'Failed to create participant',
+      );
+
+      expect(prismaService.event.findUnique).toHaveBeenCalledWith({
+        where: { slug },
+      });
+
+      expect(prismaService.participant.create).toHaveBeenCalledWith({
+        data: {
+          name: name.trim(),
+          slug: expect.any(String),
+          EventParticipant: {
+            create: { event: { connect: { id: event.id } } },
+          },
+        },
+      });
     });
   });
 });

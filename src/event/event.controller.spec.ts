@@ -35,6 +35,14 @@ describe('EventController', () => {
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
   };
+  const participant = {
+    id: '1',
+    name: 'John Doe',
+    slug: 'john-doe',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    is_event_creator: true,
+  };
 
   describe('createEvent', () => {
     it('should create an event', async () => {
@@ -45,12 +53,14 @@ describe('EventController', () => {
         creator_name: 'John Doe',
       };
 
-      eventService.createEvent = jest.fn().mockResolvedValueOnce(event);
+      eventService.createEvent = jest
+        .fn()
+        .mockResolvedValueOnce({ event, participant });
 
       const result = await controller.createEvent(body);
 
       expect(eventService.createEvent).toHaveBeenCalledWith(body);
-      expect(result).toEqual(event);
+      expect(result).toEqual({ event, participant });
     });
 
     it('should throw an error if required fields are missing', async () => {
@@ -144,15 +154,7 @@ describe('EventController', () => {
   describe('getEventParticipantsBySlug', () => {
     it('should get event participants by slug', async () => {
       const slug = 'test-event';
-      const participants = [
-        {
-          id: '1',
-          name: 'John Doe',
-          slug: 'john-doe',
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
-        },
-      ];
+      const participants = [participant];
 
       eventService.getEventParticipantsBySlug = jest
         .fn()
@@ -186,6 +188,63 @@ describe('EventController', () => {
         .mockRejectedValueOnce(new Error('Error getting event participants'));
 
       await expect(controller.getEventParticipantsBySlug(slug)).rejects.toThrow(
+        GeneralException,
+      );
+    });
+  });
+
+  describe('participateEvent', () => {
+    const slug = 'test-event';
+    const participant_name = 'John Doe';
+    const body = { participant_name };
+
+    it('should participate in an event', async () => {
+      const participant = {
+        id: '1',
+        name: participant_name,
+        slug: 'john-doe',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        is_event_creator: false,
+      };
+
+      eventService.participateEvent = jest
+        .fn()
+        .mockResolvedValueOnce(participant);
+
+      const result = await controller.participateEvent(slug, body);
+
+      expect(eventService.participateEvent).toHaveBeenCalledWith(
+        slug,
+        participant_name,
+      );
+      expect(result).toEqual(participant);
+    });
+
+    it('should throw an error if participant_name is missing', async () => {
+      const body = {
+        participant_name: '',
+      };
+
+      await expect(controller.participateEvent(slug, body)).rejects.toThrow(
+        GeneralException,
+      );
+    });
+
+    it('should throw an error if event is not found', async () => {
+      eventService.participateEvent = jest.fn().mockResolvedValueOnce(null);
+
+      await expect(controller.participateEvent(slug, body)).rejects.toThrow(
+        GeneralException,
+      );
+    });
+
+    it('should throw an error if eventService.participateEvent throws an error', async () => {
+      eventService.participateEvent = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Error participating in event'));
+
+      await expect(controller.participateEvent(slug, body)).rejects.toThrow(
         GeneralException,
       );
     });

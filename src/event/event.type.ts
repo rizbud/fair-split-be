@@ -5,3 +5,7 @@ export interface EventPayload {
   end_date: string;
   creator_name: string;
 }
+
+export interface ParticipateEventPayload {
+  participant_name: string;
+}

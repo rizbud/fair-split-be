@@ -4,6 +4,7 @@ import { randomString } from '~/common/utils';
 import { PrismaService } from '~/prisma/prisma.service';
 
 import { EventPayload } from './event.type';
+import { Event } from '@prisma/client';
 
 @Injectable()
 export class EventService {
@@ -23,12 +24,12 @@ export class EventService {
       .replace(/\s/g, '-');
     const eventSlug = `${dasherizedEvent}-${randomString()}`;
 
-    const dasherizedParticipang = creator_name
+    const dasherizedParticipant = creator_name
       .slice(0, 32)
       .trim()
       .toLowerCase()
       .replace(/\s/g, '-');
-    const participantSlug = `${dasherizedParticipang}-${randomString()}`;
+    const participantSlug = `${dasherizedParticipant}-${randomString()}`;
 
     try {
       const event = await this.prismaService.event.create({
@@ -50,7 +51,11 @@ export class EventService {
             },
           },
         },
-        include: { EventParticipant: { select: { participant: true } } },
+        include: {
+          EventParticipant: {
+            select: { participant: true },
+          },
+        },
       });
 
       return {
@@ -58,12 +63,13 @@ export class EventService {
           ...event,
           EventParticipant: undefined,
         },
-        participant: event.EventParticipant.map(
-          (eventParticipant) => eventParticipant.participant,
-        )[0],
+        participant: event.EventParticipant.map((eventParticipant) => ({
+          ...eventParticipant.participant,
+          is_event_creator: true,
+        }))[0],
       };
     } catch (error) {
-      this.logger.error(`Error to create event: ${error}`);
+      this.logger.error(`Error to createEvent.createEvent: ${error}`);
       throw error;
     }
   }
@@ -78,7 +84,7 @@ export class EventService {
 
       return event;
     } catch (error) {
-      this.logger.error(`Error to getEventBySlug: ${error}`);
+      this.logger.error(`Error to getEventBySlug.findUniqueEvent: ${error}`);
       throw error;
     }
   }
@@ -90,14 +96,62 @@ export class EventService {
       const eventParticipants =
         await this.prismaService.eventParticipant.findMany({
           where: { event: { slug } },
-          select: { participant: true },
+          select: { participant: true, is_event_creator: true },
         });
 
-      return eventParticipants.map(
-        (eventParticipant) => eventParticipant.participant,
-      );
+      return eventParticipants.map((eventParticipant) => ({
+        ...eventParticipant.participant,
+        is_event_creator: eventParticipant.is_event_creator,
+      }));
     } catch (error) {
-      this.logger.error(`Error to getEventParticipantsBySlug: ${error}`);
+      this.logger.error(
+        `Error to getEventParticipantsBySlug.findEventParticipants: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async participateEvent(slug: string, name: string) {
+    this.logger.log(`participateEvent: ${JSON.stringify({ slug, name })}`);
+
+    let event: Event | null = null;
+    try {
+      event = await this.prismaService.event.findUnique({
+        where: { slug },
+      });
+    } catch (error) {
+      this.logger.error(`Error to participateEvent.findUniqueEvent: ${error}`);
+      throw error;
+    }
+
+    if (!event) return null;
+
+    try {
+      const dasherized = name
+        .slice(0, 32)
+        .trim()
+        .toLowerCase()
+        .replace(/\s/g, '-');
+      const participantSlug = `${dasherized}-${randomString()}`;
+
+      const participant = await this.prismaService.participant.create({
+        data: {
+          name: name.trim(),
+          slug: participantSlug,
+          EventParticipant: {
+            create: { event: { connect: { id: event.id } } },
+          },
+        },
+      });
+
+      return {
+        ...participant,
+        is_event_creator: false,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error to participateEvent.createParticipant: ${error}`,
+      );
       throw error;
     }
   }
