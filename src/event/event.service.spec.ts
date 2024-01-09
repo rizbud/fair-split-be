@@ -8,7 +8,7 @@ describe('EventService', () => {
   let service: EventService;
   let prismaService: PrismaService;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [EventService, PrismaService],
     }).compile();
@@ -49,10 +49,10 @@ describe('EventService', () => {
 
   describe('createEvent', () => {
     it('should create an event and participant', async () => {
-      prismaService.participant.findUnique = jest
-        .fn()
-        .mockResolvedValueOnce(participant);
-      prismaService.event.create = jest.fn().mockResolvedValue(event);
+      prismaService.event.create = jest.fn().mockResolvedValue({
+        ...event,
+        EventParticipant: [{ participant }],
+      });
 
       const result = await service.createEvent(payload);
 
@@ -75,6 +75,7 @@ describe('EventService', () => {
             },
           },
         },
+        include: { EventParticipant: { select: { participant: true } } },
       });
 
       expect(result).toEqual({ event, participant });
@@ -87,17 +88,6 @@ describe('EventService', () => {
 
       await expect(service.createEvent(payload)).rejects.toThrow(
         'Failed to create event',
-      );
-    });
-
-    it('should throw an error if there is an error getting the participant', async () => {
-      prismaService.event.create = jest.fn().mockResolvedValue(event);
-      prismaService.participant.findUnique = jest
-        .fn()
-        .mockRejectedValueOnce(new Error('Failed to get participant'));
-
-      await expect(service.createEvent(payload)).rejects.toThrow(
-        'Failed to get participant',
       );
     });
   });
@@ -126,6 +116,41 @@ describe('EventService', () => {
 
       await expect(service.getEventBySlug(slug)).rejects.toThrow(
         'Failed to get event',
+      );
+    });
+  });
+
+  describe('getEventParticipantsBySlug', () => {
+    const slug = 'test-event';
+
+    it('should return event participants by slug', async () => {
+      const eventParticipants = [{ participant }];
+
+      prismaService.eventParticipant.findMany = jest
+        .fn()
+        .mockResolvedValue(eventParticipants);
+
+      const result = await service.getEventParticipantsBySlug(slug);
+
+      expect(prismaService.eventParticipant.findMany).toHaveBeenCalledWith({
+        where: { event: { slug } },
+        select: { participant: true },
+      });
+
+      expect(result).toEqual(
+        eventParticipants.map(
+          (eventParticipant) => eventParticipant.participant,
+        ),
+      );
+    });
+
+    it('should throw an error if there is an error getting event participants', async () => {
+      prismaService.eventParticipant.findMany = jest
+        .fn()
+        .mockRejectedValue(new Error('Failed to get event participants'));
+
+      await expect(service.getEventParticipantsBySlug(slug)).rejects.toThrow(
+        'Failed to get event participants',
       );
     });
   });

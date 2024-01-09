@@ -86,4 +86,21 @@ export class EventController {
       throw new GeneralException(500, error.message);
     }
   }
+
+  @Get(':slug/participants')
+  @UseInterceptors(BaseResponseInterceptor)
+  async getEventParticipantsBySlug(@Param('slug') slug: string) {
+    this.logger.log(`getEventParticipantsBySlug: ${slug}`);
+
+    try {
+      const data = await this.eventService.getEventParticipantsBySlug(slug);
+      if (!data.length) throw new GeneralException(404, 'Event not found');
+
+      return data;
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to getEventParticipantsBySlug: ${error}`);
+      throw new GeneralException(500, error.message);
+    }
+  }
 }

@@ -10,7 +10,7 @@ describe('EventController', () => {
   let controller: EventController;
   let eventService: EventService;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EventController],
       providers: [EventService, PrismaService],
@@ -136,6 +136,56 @@ describe('EventController', () => {
         .mockRejectedValueOnce(new Error('Error getting event'));
 
       await expect(controller.getEventBySlug(slug)).rejects.toThrow(
+        GeneralException,
+      );
+    });
+  });
+
+  describe('getEventParticipantsBySlug', () => {
+    it('should get event participants by slug', async () => {
+      const slug = 'test-event';
+      const participants = [
+        {
+          id: '1',
+          name: 'John Doe',
+          slug: 'john-doe',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+      ];
+
+      eventService.getEventParticipantsBySlug = jest
+        .fn()
+        .mockResolvedValueOnce(participants);
+
+      const result = await controller.getEventParticipantsBySlug(slug);
+
+      expect(result).toEqual(participants);
+      expect(eventService.getEventParticipantsBySlug).toHaveBeenCalledWith(
+        slug,
+      );
+    });
+
+    it('should throw an error if event is not found', async () => {
+      const slug = 'non-existent-event';
+
+      eventService.getEventParticipantsBySlug = jest
+        .fn()
+        .mockResolvedValueOnce([]);
+
+      await expect(controller.getEventParticipantsBySlug(slug)).rejects.toThrow(
+        GeneralException,
+      );
+    });
+
+    it('should throw an error if eventService.getEventParticipantsBySlug throws an error', async () => {
+      const slug = 'test-event';
+
+      eventService.getEventParticipantsBySlug = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Error getting event participants'));
+
+      await expect(controller.getEventParticipantsBySlug(slug)).rejects.toThrow(
         GeneralException,
       );
     });

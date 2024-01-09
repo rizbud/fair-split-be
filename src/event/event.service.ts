@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import type { Event, Participant } from '@prisma/client';
-
 import { randomString } from '~/common/utils';
 import { PrismaService } from '~/prisma/prisma.service';
 
@@ -32,9 +30,8 @@ export class EventService {
       .replace(/\s/g, '-');
     const participantSlug = `${dasherizedParticipang}-${randomString()}`;
 
-    let event: Event;
     try {
-      event = await this.prismaService.event.create({
+      const event = await this.prismaService.event.create({
         data: {
           name: name.trim(),
           slug: eventSlug,
@@ -53,26 +50,22 @@ export class EventService {
             },
           },
         },
+        include: { EventParticipant: { select: { participant: true } } },
       });
+
+      return {
+        event: {
+          ...event,
+          EventParticipant: undefined,
+        },
+        participant: event.EventParticipant.map(
+          (eventParticipant) => eventParticipant.participant,
+        )[0],
+      };
     } catch (error) {
       this.logger.error(`Error to create event: ${error}`);
       throw error;
     }
-
-    let participant: Participant;
-    try {
-      participant = await this.prismaService.participant.findUnique({
-        where: { slug: participantSlug },
-      });
-    } catch (error) {
-      this.logger.error(`Error to get participant: ${error}`);
-      throw error;
-    }
-
-    return {
-      event,
-      participant,
-    };
   }
 
   async getEventBySlug(slug: string) {
@@ -86,6 +79,25 @@ export class EventService {
       return event;
     } catch (error) {
       this.logger.error(`Error to getEventBySlug: ${error}`);
+      throw error;
+    }
+  }
+
+  async getEventParticipantsBySlug(slug: string) {
+    this.logger.log(`getEventParticipantsBySlug: ${slug}`);
+
+    try {
+      const eventParticipants =
+        await this.prismaService.eventParticipant.findMany({
+          where: { event: { slug } },
+          select: { participant: true },
+        });
+
+      return eventParticipants.map(
+        (eventParticipant) => eventParticipant.participant,
+      );
+    } catch (error) {
+      this.logger.error(`Error to getEventParticipantsBySlug: ${error}`);
       throw error;
     }
   }
