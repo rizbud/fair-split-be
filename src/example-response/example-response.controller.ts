@@ -10,7 +10,6 @@ import type {
   CursorPaginatedData,
   CursorPaginationInput,
   PaginatedData,
-  Pagination,
   PaginationInput,
 } from '~/common/interface';
 

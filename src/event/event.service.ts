@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import type { Event, Participant } from '@prisma/client';
 
+import { randomString } from '~/common/utils';
 import { PrismaService } from '~/prisma/prisma.service';
-import { mapToCamelCase, randomString } from '~/common/utils';
 
 import { EventPayload } from './event.type';
 
@@ -11,9 +11,12 @@ import { EventPayload } from './event.type';
 export class EventService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  private readonly logger = new Logger('EventService');
+
   async createEvent(payload: EventPayload) {
-    const { name, description, startDate, endDate, creatorName } =
-      mapToCamelCase(payload);
+    this.logger.log(`createEvent: ${JSON.stringify(payload)}`);
+
+    const { name, description, start_date, end_date, creator_name } = payload;
 
     let isEventSlugExist = true;
     let eventSlug = '';
@@ -34,6 +37,7 @@ export class EventService {
         }
       } catch (error) {
         isEventSlugExist = false;
+        this.logger.error(`Error to check isEventSlugExist: ${error}`);
         throw error;
       }
     }
@@ -42,7 +46,7 @@ export class EventService {
     let participantSlug = '';
 
     while (isParticipantSlugExist) {
-      const dasherized = creatorName
+      const dasherized = creator_name
         .slice(0, 32)
         .toLowerCase()
         .replace(/\s/g, '-');
@@ -60,6 +64,7 @@ export class EventService {
         }
       } catch (error) {
         isParticipantSlugExist = false;
+        this.logger.error(`Error to check isParticipantSlugExist: ${error}`);
         throw error;
       }
     }
@@ -71,13 +76,13 @@ export class EventService {
           name,
           slug: eventSlug,
           description,
-          start_date: startDate,
-          end_date: endDate,
+          start_date,
+          end_date,
           EventParticipant: {
             create: {
               participant: {
                 create: {
-                  name: creatorName,
+                  name: creator_name,
                   slug: participantSlug,
                 },
               },
@@ -87,6 +92,7 @@ export class EventService {
         },
       });
     } catch (error) {
+      this.logger.error(`Error to create event: ${error}`);
       throw error;
     }
 
@@ -96,15 +102,28 @@ export class EventService {
         where: { slug: participantSlug },
       });
     } catch (error) {
+      this.logger.error(`Error to get participant: ${error}`);
       throw error;
     }
+
     return {
       event,
       participant,
     };
   }
 
-  getEventBySlug(slug: string) {
-    return this.prismaService.event.findUnique({ where: { slug } });
+  async getEventBySlug(slug: string) {
+    this.logger.log(`getEventBySlug: ${slug}`);
+
+    try {
+      const event = await this.prismaService.event.findUnique({
+        where: { slug },
+      });
+
+      return event;
+    } catch (error) {
+      this.logger.error(`Error to getEventBySlug: ${error}`);
+      throw error;
+    }
   }
 }
