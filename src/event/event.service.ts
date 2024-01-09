@@ -18,71 +18,34 @@ export class EventService {
 
     const { name, description, start_date, end_date, creator_name } = payload;
 
-    let isEventSlugExist = true;
-    let eventSlug = '';
+    const dasherizedEvent = name
+      .slice(0, 32)
+      .trim()
+      .toLowerCase()
+      .replace(/\s/g, '-');
+    const eventSlug = `${dasherizedEvent}-${randomString()}`;
 
-    while (isEventSlugExist) {
-      const dasherized = name.slice(0, 32).toLowerCase().replace(/\s/g, '-');
-      const tempSlug = `${dasherized}-${randomString()}`;
-
-      try {
-        const event = await this.prismaService.event.findUnique({
-          where: { slug: tempSlug },
-          select: { id: true },
-        });
-
-        if (!event) {
-          isEventSlugExist = false;
-          eventSlug = tempSlug;
-        }
-      } catch (error) {
-        isEventSlugExist = false;
-        this.logger.error(`Error to check isEventSlugExist: ${error}`);
-        throw error;
-      }
-    }
-
-    let isParticipantSlugExist = true;
-    let participantSlug = '';
-
-    while (isParticipantSlugExist) {
-      const dasherized = creator_name
-        .slice(0, 32)
-        .toLowerCase()
-        .replace(/\s/g, '-');
-      const tempSlug = `${dasherized}-${randomString()}`;
-
-      try {
-        const participant = await this.prismaService.participant.findUnique({
-          where: { slug: tempSlug },
-          select: { id: true },
-        });
-
-        if (!participant) {
-          isParticipantSlugExist = false;
-          participantSlug = tempSlug;
-        }
-      } catch (error) {
-        isParticipantSlugExist = false;
-        this.logger.error(`Error to check isParticipantSlugExist: ${error}`);
-        throw error;
-      }
-    }
+    const dasherizedParticipang = creator_name
+      .slice(0, 32)
+      .trim()
+      .toLowerCase()
+      .replace(/\s/g, '-');
+    const participantSlug = `${dasherizedParticipang}-${randomString()}`;
 
     let event: Event;
     try {
       event = await this.prismaService.event.create({
         data: {
-          name,
+          name: name.trim(),
           slug: eventSlug,
-          description,
+          description: description?.trim(),
           start_date,
           end_date,
           EventParticipant: {
             create: {
               participant: {
                 create: {
-                  name: creator_name,
+                  name: creator_name.trim(),
                   slug: participantSlug,
                 },
               },

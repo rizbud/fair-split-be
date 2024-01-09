@@ -29,14 +29,19 @@ export class EventController {
 
     this.logger.log(`createEvent: ${JSON.stringify(body)}`);
 
-    if (!name || !start_date || !end_date || !creator_name) {
+    if (
+      !name.trim() ||
+      !start_date.trim() ||
+      !end_date.trim() ||
+      !creator_name.trim()
+    ) {
       const missingFields = [];
       Object.entries({
         name,
         start_date,
         end_date,
         creator_name,
-      }).forEach(([key, value]) => !value && missingFields.push(key));
+      }).forEach(([key, value]) => !value.trim() && missingFields.push(key));
 
       throw new GeneralException(
         400,
