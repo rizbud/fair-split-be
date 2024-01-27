@@ -1,6 +1,7 @@
 export type PaginationInput = {
-  page?: number;
-  limit?: number;
+  page?: string;
+  limit?: string;
+  order_by?: 'asc' | 'desc';
 };
 
 export interface CursorPaginationInput {

@@ -41,8 +41,8 @@ export class ExampleResponseController {
         },
       ],
       pagination: {
-        page,
-        limit,
+        page: Number(page),
+        limit: Number(limit),
         totalData: 100,
         totalPage: 10,
       },
