@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { randomString } from '~/common/utils';
+import { toSlug } from '~/common/utils';
 import { PrismaService } from '~/prisma/prisma.service';
 
 import { EventPayload } from './event.type';
@@ -17,19 +17,8 @@ export class EventService {
 
     const { name, description, start_date, end_date, creator_name } = payload;
 
-    const dasherizedEvent = name
-      .slice(0, 32)
-      .trim()
-      .toLowerCase()
-      .replace(/\s/g, '-');
-    const eventSlug = `${dasherizedEvent}-${randomString()}`;
-
-    const dasherizedParticipant = creator_name
-      .slice(0, 32)
-      .trim()
-      .toLowerCase()
-      .replace(/\s/g, '-');
-    const participantSlug = `${dasherizedParticipant}-${randomString()}`;
+    const eventSlug = toSlug(name);
+    const participantSlug = toSlug(creator_name);
 
     try {
       const event = await this.prismaService.event.create({
@@ -127,12 +116,7 @@ export class EventService {
     if (!event) return null;
 
     try {
-      const dasherized = name
-        .slice(0, 32)
-        .trim()
-        .toLowerCase()
-        .replace(/\s/g, '-');
-      const participantSlug = `${dasherized}-${randomString()}`;
+      const participantSlug = toSlug(name);
 
       const participant = await this.prismaService.participant.create({
         data: {
