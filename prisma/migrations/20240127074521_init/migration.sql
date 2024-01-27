@@ -13,7 +13,7 @@ CREATE TABLE "events" (
     "end_date" TIMESTAMP(3) NOT NULL,
     "slug" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "events_pkey" PRIMARY KEY ("id")
 );
@@ -24,7 +24,7 @@ CREATE TABLE "participants" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "participants_pkey" PRIMARY KEY ("id")
 );
@@ -36,7 +36,7 @@ CREATE TABLE "event_participants" (
     "participant_id" TEXT NOT NULL,
     "is_event_creator" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "event_participants_pkey" PRIMARY KEY ("id")
 );
@@ -53,10 +53,9 @@ CREATE TABLE "expenses" (
     "service_fee" BIGINT NOT NULL DEFAULT 0,
     "discount" BIGINT NOT NULL DEFAULT 0,
     "splitting_method" "SplittingMethod" NOT NULL DEFAULT 'EQUAL',
-    "payment_proof_path" TEXT,
     "event_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "expenses_pkey" PRIMARY KEY ("id")
 );
@@ -67,14 +66,25 @@ CREATE TABLE "expense_participants" (
     "expense_id" INTEGER NOT NULL,
     "participant_id" TEXT NOT NULL,
     "tag" "ParticipantTag" NOT NULL DEFAULT 'PARTICIPANT',
-    "pay_amount" BIGINT NOT NULL DEFAULT 0,
-    "payed_amount" BIGINT NOT NULL DEFAULT 0,
-    "payed_at" TIMESTAMP(3),
-    "payment_proof_path" TEXT,
+    "amount_to_paid" BIGINT NOT NULL DEFAULT 0,
+    "paid_amount" BIGINT NOT NULL DEFAULT 0,
+    "paid_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "expense_participants_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_proofs" (
+    "id" TEXT NOT NULL,
+    "path" TEXT NOT NULL,
+    "expense_id" INTEGER,
+    "expense_participant_id" INTEGER,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payment_proofs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -116,6 +126,18 @@ CREATE UNIQUE INDEX "expense_participants_expense_id_participant_id_key" ON "exp
 -- CreateIndex
 CREATE UNIQUE INDEX "expense_participants_participant_id_expense_id_key" ON "expense_participants"("participant_id", "expense_id");
 
+-- CreateIndex
+CREATE INDEX "payment_proofs_expense_id_index" ON "payment_proofs"("expense_id");
+
+-- CreateIndex
+CREATE INDEX "payment_proofs_expense_participant_id_index" ON "payment_proofs"("expense_participant_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_proofs_expense_id_expense_participant_id_key" ON "payment_proofs"("expense_id", "expense_participant_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_proofs_expense_participant_id_expense_id_key" ON "payment_proofs"("expense_participant_id", "expense_id");
+
 -- AddForeignKey
 ALTER TABLE "event_participants" ADD CONSTRAINT "event_participants_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -130,3 +152,9 @@ ALTER TABLE "expense_participants" ADD CONSTRAINT "expense_participants_expense_
 
 -- AddForeignKey
 ALTER TABLE "expense_participants" ADD CONSTRAINT "expense_participants_participant_id_fkey" FOREIGN KEY ("participant_id") REFERENCES "participants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_proofs" ADD CONSTRAINT "payment_proofs_expense_id_fkey" FOREIGN KEY ("expense_id") REFERENCES "expenses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_proofs" ADD CONSTRAINT "payment_proofs_expense_participant_id_fkey" FOREIGN KEY ("expense_participant_id") REFERENCES "expense_participants"("id") ON DELETE SET NULL ON UPDATE CASCADE;

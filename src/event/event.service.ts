@@ -28,7 +28,7 @@ export class EventService {
           description: description?.trim(),
           start_date,
           end_date,
-          EventParticipant: {
+          event_participants: {
             create: {
               participant: {
                 create: {
@@ -41,7 +41,7 @@ export class EventService {
           },
         },
         include: {
-          EventParticipant: {
+          event_participants: {
             select: { participant: true },
           },
         },
@@ -52,7 +52,7 @@ export class EventService {
           ...event,
           EventParticipant: undefined,
         },
-        participant: event.EventParticipant.map((eventParticipant) => ({
+        participant: event.event_participants.map((eventParticipant) => ({
           ...eventParticipant.participant,
           is_event_creator: true,
         }))[0],
@@ -122,7 +122,7 @@ export class EventService {
         data: {
           name: name.trim(),
           slug: participantSlug,
-          EventParticipant: {
+          event_participants: {
             create: { event: { connect: { id: event.id } } },
           },
         },

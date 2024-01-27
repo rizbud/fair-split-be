@@ -10,6 +10,10 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  BigInt.prototype['toJSON'] = function () {
+    return this.toString();
+  };
+
   await app.listen(port);
 }
 bootstrap();

@@ -23,29 +23,29 @@ enum ParticipantTag {
 }
 
 model Event {
-  id               Int                @id @default(autoincrement())
-  name             String
-  description      String?
-  start_date       DateTime
-  end_date         DateTime
-  slug             String             @unique
-  created_at       DateTime           @default(now())
-  updated_at       DateTime           @updatedAt
-  EventParticipant EventParticipant[]
-  Expense          Expense[]
+  id                 Int                @id @default(autoincrement())
+  name               String
+  description        String?
+  start_date         DateTime
+  end_date           DateTime
+  slug               String             @unique
+  created_at         DateTime           @default(now())
+  updated_at         DateTime           @updatedAt
+  event_participants EventParticipant[]
+  expenses           Expense[]
 
   @@index([slug], name: "events_slug_unique")
   @@map("events")
 }
 
 model Participant {
-  id                 String               @id @default(uuid())
-  name               String
-  slug               String               @unique
-  created_at         DateTime             @default(now())
-  updated_at         DateTime             @updatedAt
-  EventParticipant   EventParticipant[]
-  ExpenseParticipant ExpenseParticipant[]
+  id                   String               @id @default(uuid())
+  name                 String
+  slug                 String               @unique
+  created_at           DateTime             @default(now())
+  updated_at           DateTime             @updatedAt
+  event_participants   EventParticipant[]
+  expense_participants ExpenseParticipant[]
 
   @@index([slug], name: "participants_slug_unique")
   @@map("participants")
@@ -69,44 +69,61 @@ model EventParticipant {
 }
 
 model Expense {
-  id                 Int                  @id @default(autoincrement())
-  name               String
-  description        String?
-  start_date         DateTime
-  end_date           DateTime
-  amount             BigInt
-  tax                BigInt               @default(0)
-  service_fee        BigInt               @default(0)
-  discount           BigInt               @default(0)
-  splitting_method   SplittingMethod      @default(EQUAL)
-  payment_proof_path String?
-  event_id           Int
-  created_at         DateTime             @default(now())
-  updated_at         DateTime             @updatedAt
-  event              Event                @relation(fields: [event_id], references: [id])
-  ExpenseParticipant ExpenseParticipant[]
+  id                   Int                  @id @default(autoincrement())
+  name                 String
+  description          String?
+  start_date           DateTime
+  end_date             DateTime
+  amount               BigInt
+  tax                  BigInt               @default(0)
+  service_fee          BigInt               @default(0)
+  discount             BigInt               @default(0)
+  splitting_method     SplittingMethod      @default(EQUAL)
+  event_id             Int
+  created_at           DateTime             @default(now())
+  updated_at           DateTime             @updatedAt
+  event                Event                @relation(fields: [event_id], references: [id])
+  expense_participants ExpenseParticipant[]
+  payment_proofs       PaymentProof[]
 
   @@index([event_id], name: "expenses_event_id_index")
   @@map("expenses")
 }
 
 model ExpenseParticipant {
-  id                 Int            @id @default(autoincrement())
-  expense_id         Int
-  participant_id     String
-  tag                ParticipantTag @default(PARTICIPANT)
-  pay_amount         BigInt         @default(0)
-  payed_amount       BigInt         @default(0)
-  payed_at           DateTime?
-  payment_proof_path String?
-  created_at         DateTime       @default(now())
-  updated_at         DateTime       @updatedAt
-  expense            Expense        @relation(fields: [expense_id], references: [id])
-  participant        Participant    @relation(fields: [participant_id], references: [id])
+  id             Int            @id @default(autoincrement())
+  expense_id     Int
+  participant_id String
+  tag            ParticipantTag @default(PARTICIPANT)
+  amount_to_paid BigInt         @default(0)
+  paid_amount    BigInt         @default(0)
+  paid_at        DateTime?
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  expense        Expense        @relation(fields: [expense_id], references: [id])
+  participant    Participant    @relation(fields: [participant_id], references: [id])
+  payment_proofs PaymentProof[]
 
   @@unique([expense_id, participant_id], name: "expense_participants_expense_id_participant_id_unique")
   @@unique([participant_id, expense_id], name: "expense_participants_participant_id_expense_id_unique")
   @@index([expense_id], name: "expense_participants_expense_id_index")
   @@index([participant_id], name: "expense_participants_participant_id_index")
   @@map("expense_participants")
+}
+
+model PaymentProof {
+  id                     String              @id @default(uuid())
+  path                   String
+  expense_id             Int?
+  expense_participant_id Int?
+  created_at             DateTime            @default(now())
+  updated_at             DateTime            @updatedAt
+  expense                Expense?            @relation(fields: [expense_id], references: [id])
+  expense_participant    ExpenseParticipant? @relation(fields: [expense_participant_id], references: [id])
+
+  @@unique([expense_id, expense_participant_id], name: "payment_proofs_expense_id_expense_participant_id_unique")
+  @@unique([expense_participant_id, expense_id], name: "payment_proofs_expense_participant_id_expense_id_unique")
+  @@index([expense_id], name: "payment_proofs_expense_id_index")
+  @@index([expense_participant_id], name: "payment_proofs_expense_participant_id_index")
+  @@map("payment_proofs")
 }
