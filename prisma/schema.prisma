@@ -95,7 +95,7 @@ model ExpenseParticipant {
   expense_id     Int
   participant_id String
   tag            ParticipantTag @default(PARTICIPANT)
-  amount_to_paid BigInt         @default(0)
+  amount_to_pay  BigInt         @default(0)
   paid_amount    BigInt         @default(0)
   paid_at        DateTime?
   created_at     DateTime       @default(now())

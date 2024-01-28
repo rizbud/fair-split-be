@@ -66,7 +66,7 @@ CREATE TABLE "expense_participants" (
     "expense_id" INTEGER NOT NULL,
     "participant_id" TEXT NOT NULL,
     "tag" "ParticipantTag" NOT NULL DEFAULT 'PARTICIPANT',
-    "amount_to_paid" BIGINT NOT NULL DEFAULT 0,
+    "amount_to_pay" BIGINT NOT NULL DEFAULT 0,
     "paid_amount" BIGINT NOT NULL DEFAULT 0,
     "paid_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -63,7 +63,7 @@ async function main() {
                   tag: isEventCreator
                     ? ParticipantTag.PAYER
                     : ParticipantTag.PARTICIPANT,
-                  amount_to_paid: isEventCreator
+                  amount_to_pay: isEventCreator
                     ? 0
                     : 100 / (participants.length - 1),
                 };
