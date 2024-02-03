@@ -139,4 +139,19 @@ export class EventService {
       throw error;
     }
   }
+
+  async getEventById(id: number) {
+    this.logger.log(`getEventById: ${id}`);
+
+    try {
+      const event = await this.prismaService.event.findUnique({
+        where: { id },
+      });
+
+      return event;
+    } catch (error) {
+      this.logger.error(`Error to getEventById.findUniqueEvent: ${error}`);
+      throw error;
+    }
+  }
 }

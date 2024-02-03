@@ -1,9 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Event } from '@prisma/client';
+import { ParticipantTag, SplittingMethod } from '@prisma/client';
 
 import { PrismaService } from '~/prisma/prisma.service';
 
-import { GetExpensesByEventSlugRequest } from './expense.type';
+import {
+  CreateExpensePayload,
+  GetExpensesByEventSlugRequest,
+} from './expense.type';
 
 @Injectable()
 export class ExpenseService {
@@ -14,23 +17,11 @@ export class ExpenseService {
   async getExpensesByEventSlug(payload: GetExpensesByEventSlugRequest) {
     this.logger.log(`getExpensesByEventSlug: ${JSON.stringify(payload)}`);
 
-    const { event_slug, order_by = 'desc', sort_by = 'created_at' } = payload;
+    const { event_slug } = payload;
+    const sort_by = payload.sort_by || 'created_at';
+    const order_by = payload.order_by || 'desc';
     const page = Number(payload.page || 1);
     const limit = Number(payload.limit || 10);
-
-    let event: Event | null = null;
-    try {
-      event = await this.prismaService.event.findUnique({
-        where: { slug: event_slug },
-      });
-    } catch (error) {
-      this.logger.error(
-        `Error to getExpensesByEventSlug.findUniqueEvent: ${error}`,
-      );
-      throw error;
-    }
-
-    if (!event) return null;
 
     let totalData = 0;
     let totalPage = 1;
@@ -93,13 +84,86 @@ export class ExpenseService {
           ...ep,
           name: ep.participant.name,
           slug: ep.participant.slug,
-          participant_id: undefined,
           participant: undefined,
         })),
         expense_participants: undefined,
       };
     } catch (error) {
       this.logger.error(`Error to getExpenseById.findUniqueExpense: ${error}`);
+      throw error;
+    }
+  }
+
+  async createExpense(payload: CreateExpensePayload) {
+    this.logger.log(`createExpense: ${JSON.stringify(payload)}`);
+
+    const {
+      event_id,
+      name,
+      description,
+      start_date,
+      end_date,
+      amount = 0,
+      tax = 0,
+      service_fee = 0,
+      discount = 0,
+      splitting_method,
+      participants,
+    } = payload;
+
+    const totalAmount = amount + tax + service_fee - discount;
+    const expenseParticipants = participants.filter(
+      (p) => p.tag === ParticipantTag.PARTICIPANT,
+    );
+
+    const expenseParticipantsData = participants.map((participant) => {
+      const isPayer = participant.tag === ParticipantTag.PAYER;
+      let amountToPay = 0;
+
+      switch (splitting_method) {
+        case SplittingMethod.PERCENTAGE:
+          amountToPay =
+            (participant.amount_to_pay_percentage / 100) * totalAmount;
+          break;
+        case SplittingMethod.CUSTOM_AMOUNT:
+          amountToPay = participant.amount_to_pay_nominal;
+          break;
+        default:
+          amountToPay = totalAmount / expenseParticipants.length;
+          break;
+      }
+
+      this.logger.log(JSON.stringify({ totalAmount, amountToPay, isPayer }));
+
+      return {
+        participant_id: participant.id,
+        amount_to_pay: isPayer ? 0 : amountToPay,
+        tag: participant.tag,
+      };
+    });
+
+    try {
+      const expense = await this.prismaService.expense.create({
+        data: {
+          name,
+          description,
+          start_date,
+          end_date,
+          amount,
+          tax,
+          service_fee,
+          discount,
+          splitting_method,
+          event: { connect: { id: event_id } },
+          expense_participants: {
+            createMany: { data: expenseParticipantsData },
+          },
+        },
+      });
+
+      return expense;
+    } catch (error) {
+      this.logger.error(`Error to createExpense.createExpense: ${error}`);
       throw error;
     }
   }
