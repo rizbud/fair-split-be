@@ -72,8 +72,7 @@ export class ExpenseService {
       const expense = await this.prismaService.expense.findUnique({
         where: { id: expenseId },
         include: {
-          expense_participants: { include: { participant: true } },
-          payment_proofs: true,
+          _count: true,
         },
       });
 
@@ -81,13 +80,9 @@ export class ExpenseService {
 
       return {
         ...expense,
-        participants: expense.expense_participants.map((ep) => ({
-          ...ep,
-          name: ep.participant.name,
-          slug: ep.participant.slug,
-          participant: undefined,
-        })),
-        expense_participants: undefined,
+        totalParticipants: expense._count.expense_participants,
+        totalPaymentProofs: expense._count.payment_proofs,
+        count: undefined,
       };
     } catch (error) {
       this.logger.error(`Error to getExpenseById.findUniqueExpense: ${error}`);
@@ -181,6 +176,36 @@ export class ExpenseService {
       return expense;
     } catch (error) {
       this.logger.error(`Error to updateExpense: ${error}`);
+      throw error;
+    }
+  }
+
+  async addPaymentProofs(expenseId: number, paymentProofs: Array<string>) {
+    this.logger.log(`addPaymentProofs: ${expenseId}`);
+
+    try {
+      return this.prismaService.paymentProof.createMany({
+        data: paymentProofs.map((path) => ({
+          path,
+          expense_id: expenseId,
+        })),
+        skipDuplicates: true,
+      });
+    } catch (error) {
+      this.logger.error(`Error to addPaymentProofs: ${error}`);
+      throw error;
+    }
+  }
+
+  async getPaymentProofsByExpenseId(expenseId: number) {
+    this.logger.log(`getPaymentProofs: ${expenseId}`);
+
+    try {
+      return this.prismaService.paymentProof.findMany({
+        where: { expense_id: expenseId },
+      });
+    } catch (error) {
+      this.logger.error(`Error to getPaymentProofs: ${error}`);
       throw error;
     }
   }
