@@ -192,7 +192,7 @@ export class ExpenseService {
 
       return expense;
     } catch (error) {
-      this.logger.error(`Error to updateExpense: ${error}`);
+      this.logger.error(`Error to updateExpense.updateExpense: ${error}`);
       throw error;
     }
   }
@@ -209,7 +209,9 @@ export class ExpenseService {
         skipDuplicates: true,
       });
     } catch (error) {
-      this.logger.error(`Error to addPaymentProofs: ${error}`);
+      this.logger.error(
+        `Error to addPaymentProofs.createManyPaymentProofs: ${error}`,
+      );
       throw error;
     }
   }
@@ -222,7 +224,9 @@ export class ExpenseService {
         where: { expense_id: expenseId },
       });
     } catch (error) {
-      this.logger.error(`Error to getPaymentProofs: ${error}`);
+      this.logger.error(
+        `Error to getPaymentProofs.findManyPaymentProofs: ${error}`,
+      );
       throw error;
     }
   }

@@ -29,7 +29,7 @@ export class FirebaseService {
 
       return prefix + bucket + upload.metadata.fullPath;
     } catch (error) {
-      this.logger.error(`Error to uploadFile: ${error}`);
+      this.logger.error(`Error to uploadFile.uploadBytes: ${error}`);
       throw error;
     }
   }
