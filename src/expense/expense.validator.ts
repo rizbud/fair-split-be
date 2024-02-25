@@ -2,12 +2,14 @@ import { ParticipantTag, SplittingMethod } from '@prisma/client';
 
 import validator from 'validator';
 
+import { ORDER_BY, SORT_BY } from '~/common/constants';
+
 import {
   CreateExpensePayload,
   ExpenseParticipantsPayload,
   GetExpensesByEventSlugRequest,
+  UpdateExpensePayload,
 } from './expense.type';
-import { ORDER_BY, SORT_BY } from '~/common/constants';
 
 export class ExpenseValidator {
   validateGetExpensesQuery(query: GetExpensesByEventSlugRequest) {
@@ -149,6 +151,29 @@ export class ExpenseValidator {
     }
 
     return undefined;
+  }
+
+  validateUpdateExpensePayload(id: string, payload: UpdateExpensePayload) {
+    if (isNaN(Number(id))) return 'Expense ID must be a number';
+
+    const { start_date, end_date } = payload;
+
+    if (!start_date && !end_date) return;
+
+    // if start_date or end_date is present, both must be present
+    if ((!start_date && end_date) || (start_date && !end_date)) {
+      return 'Both start_date and end_date must be present';
+    }
+
+    // Check if start_date and end_date are in RFC3339 format
+    if (!validator.isRFC3339(start_date) || !validator.isRFC3339(end_date)) {
+      return 'Date must be in RFC3339 format (YYYY-MM-DDTHH:mm:ssZ)';
+    }
+
+    // Check if start_date is before end_date
+    if (validator.isAfter(start_date, end_date)) {
+      return 'Start date cannot be after end date';
+    }
   }
 
   private getTotalPercentage(participants: ExpenseParticipantsPayload[]) {

@@ -6,6 +6,7 @@ import { PrismaService } from '~/prisma/prisma.service';
 import {
   CreateExpensePayload,
   GetExpensesByEventSlugRequest,
+  UpdateExpensePayload,
 } from './expense.type';
 
 @Injectable()
@@ -164,6 +165,22 @@ export class ExpenseService {
       return expense;
     } catch (error) {
       this.logger.error(`Error to createExpense.createExpense: ${error}`);
+      throw error;
+    }
+  }
+
+  async updateExpense(expenseId: number, payload: UpdateExpensePayload) {
+    this.logger.log(`updateExpense: ${expenseId}`);
+
+    try {
+      const expense = await this.prismaService.expense.update({
+        where: { id: expenseId },
+        data: payload,
+      });
+
+      return expense;
+    } catch (error) {
+      this.logger.error(`Error to updateExpense: ${error}`);
       throw error;
     }
   }

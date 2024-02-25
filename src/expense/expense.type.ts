@@ -28,3 +28,10 @@ export interface CreateExpensePayload {
   splitting_method: SplittingMethod;
   participants?: ExpenseParticipantsPayload[];
 }
+
+export interface UpdateExpensePayload {
+  name?: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+}

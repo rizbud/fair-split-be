@@ -4,6 +4,7 @@ import {
   Get,
   Logger,
   Param,
+  Patch,
   Post,
   Query,
   UseInterceptors,
@@ -14,14 +15,14 @@ import {
   BaseResponseInterceptor,
   PaginatedResponseInterceptor,
 } from '~/common/interceptors';
-
 import { EventService } from '~/event/event.service';
+
+import { ExpenseService } from './expense.service';
 import {
   CreateExpensePayload,
   GetExpensesByEventSlugRequest,
+  UpdateExpensePayload,
 } from './expense.type';
-
-import { ExpenseService } from './expense.service';
 import { ExpenseValidator } from './expense.validator';
 
 @Controller('expenses')
@@ -97,6 +98,34 @@ export class ExpenseController {
     } catch (error) {
       if (error instanceof GeneralException) throw error;
       this.logger.error(`Error to createExpense: ${error}`);
+      throw new GeneralException(500, 'Internal server error');
+    }
+  }
+
+  @Patch('/:id')
+  @UseInterceptors(BaseResponseInterceptor)
+  async updateExpense(
+    @Param('id') id: string,
+    @Body() body?: UpdateExpensePayload,
+  ) {
+    this.logger.log(`updateExpense: ${id}`);
+
+    const err = this.validator.validateUpdateExpensePayload(id, body);
+    if (err) throw new GeneralException(400, err);
+
+    try {
+      const expense = await this.expenseService.getExpenseById(Number(id));
+      if (!expense) throw new GeneralException(404, 'Expense not found');
+
+      const updatedExpense = await this.expenseService.updateExpense(
+        Number(id),
+        body,
+      );
+
+      return updatedExpense;
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to updateExpense: ${error}`);
       throw new GeneralException(500, 'Internal server error');
     }
   }
