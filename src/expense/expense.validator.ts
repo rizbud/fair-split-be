@@ -2,12 +2,13 @@ import { ParticipantTag, SplittingMethod } from '@prisma/client';
 
 import validator from 'validator';
 
-import { ORDER_BY, SORT_BY } from '~/common/constants';
+import { ORDER_BY, PARTICIPANT_SORT_BY, SORT_BY } from '~/common/constants';
 
 import {
   CreateExpensePayload,
   ExpenseParticipantsPayload,
   GetExpensesByEventSlugRequest,
+  GetParticipantsByExpenseIdRequest,
   UpdateExpensePayload,
 } from './expense.type';
 
@@ -173,6 +174,28 @@ export class ExpenseValidator {
     // Check if start_date is before end_date
     if (validator.isAfter(start_date, end_date)) {
       return 'Start date cannot be after end date';
+    }
+  }
+
+  validateGetParticipantsByExpenseIdQuery(
+    query: GetParticipantsByExpenseIdRequest,
+  ) {
+    const { page, limit, order_by, sort_by } = query || {};
+
+    if (page && isNaN(Number(page))) {
+      return 'page must be a number';
+    }
+
+    if (limit && isNaN(Number(limit))) {
+      return 'limit must be a number';
+    }
+
+    if (order_by && !ORDER_BY.includes(order_by)) {
+      return 'Invalid order_by query parameter in request';
+    }
+
+    if (sort_by && !PARTICIPANT_SORT_BY.includes(sort_by)) {
+      return 'Invalid sort_by query parameter in request';
     }
   }
 

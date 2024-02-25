@@ -6,6 +6,7 @@ import { PrismaService } from '~/prisma/prisma.service';
 import {
   CreateExpensePayload,
   GetExpensesByEventSlugRequest,
+  GetParticipantsByExpenseIdRequest,
   UpdateExpensePayload,
 } from './expense.type';
 
@@ -43,13 +44,22 @@ export class ExpenseService {
     try {
       const expenses = await this.prismaService.expense.findMany({
         where: { event: { slug: event_slug } },
+        include: {
+          _count: { select: { expense_participants: true } },
+        },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { [sort_by]: order_by },
       });
 
+      const expensesMap = expenses.map((expense) => ({
+        ...expense,
+        totalParticipants: expense._count.expense_participants,
+        count: undefined,
+      }));
+
       return {
-        data: expenses,
+        data: expensesMap,
         pagination: {
           page,
           limit,
@@ -72,7 +82,8 @@ export class ExpenseService {
       const expense = await this.prismaService.expense.findUnique({
         where: { id: expenseId },
         include: {
-          _count: true,
+          _count: { select: { expense_participants: true } },
+          payment_proofs: true,
         },
       });
 
@@ -81,7 +92,6 @@ export class ExpenseService {
       return {
         ...expense,
         totalParticipants: expense._count.expense_participants,
-        totalPaymentProofs: expense._count.payment_proofs,
         count: undefined,
       };
     } catch (error) {
@@ -155,9 +165,16 @@ export class ExpenseService {
             createMany: { data: expenseParticipantsData },
           },
         },
+        include: {
+          _count: { select: { expense_participants: true } },
+        },
       });
 
-      return expense;
+      return {
+        ...expense,
+        totalParticipants: expense._count.expense_participants,
+        count: undefined,
+      };
     } catch (error) {
       this.logger.error(`Error to createExpense.createExpense: ${error}`);
       throw error;
@@ -206,6 +223,75 @@ export class ExpenseService {
       });
     } catch (error) {
       this.logger.error(`Error to getPaymentProofs: ${error}`);
+      throw error;
+    }
+  }
+
+  async getParticipantsByExpenseId(
+    expenseId: number,
+    params: GetParticipantsByExpenseIdRequest,
+  ) {
+    this.logger.log(
+      `getParticipantsByExpenseId: ${JSON.stringify({ expenseId, params })}`,
+    );
+
+    const sort_by = params.sort_by || 'name';
+    const order_by = params.order_by || 'asc';
+    const page = Number(params.page || 1);
+    const limit = Number(params.limit || 10);
+
+    let totalData = 0;
+    let totalPage = 1;
+
+    try {
+      totalData = await this.prismaService.expenseParticipant.count({
+        where: { expense_id: expenseId },
+      });
+
+      totalPage = Math.ceil(totalData / limit);
+    } catch (error) {
+      this.logger.error(
+        `Error to getParticipantsByExpenseId.countParticipants: ${error}`,
+      );
+      throw error;
+    }
+
+    try {
+      const expenseParticipants =
+        await this.prismaService.expenseParticipant.findMany({
+          where: { expense_id: expenseId },
+          include: {
+            participant: { select: { name: true } },
+            payment_proofs: true,
+          },
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy:
+            sort_by === 'name'
+              ? { participant: { name: order_by } }
+              : [{ [sort_by]: order_by }, { participant: { name: 'asc' } }],
+        });
+
+      const participants = expenseParticipants.map((participant) => ({
+        ...participant,
+        ...participant.participant,
+        participant: undefined,
+        participant_id: undefined,
+      }));
+
+      return {
+        data: participants,
+        pagination: {
+          page,
+          limit,
+          totalData,
+          totalPage,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error to getParticipantsByExpenseId.findManyExpenseParticipants: ${error}`,
+      );
       throw error;
     }
   }

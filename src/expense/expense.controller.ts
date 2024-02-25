@@ -24,6 +24,7 @@ import { ExpenseService } from './expense.service';
 import {
   CreateExpensePayload,
   GetExpensesByEventSlugRequest,
+  GetParticipantsByExpenseIdRequest,
   UpdateExpensePayload,
 } from './expense.type';
 import { ExpenseValidator } from './expense.validator';
@@ -77,6 +78,34 @@ export class ExpenseController {
     } catch (error) {
       if (error instanceof GeneralException) throw error;
       this.logger.error(`Error to getExpenseById: ${error}`);
+      throw new GeneralException(500, 'Internal server error');
+    }
+  }
+
+  @Get('/:id/participants')
+  @UseInterceptors(PaginatedResponseInterceptor)
+  async getParticipantsByExpenseId(
+    @Param('id') id: string,
+    @Query() query?: GetParticipantsByExpenseIdRequest,
+  ) {
+    this.logger.log(`getParticipantsByExpenseId: ${id}`);
+
+    const err = this.validator.validateGetParticipantsByExpenseIdQuery(query);
+    if (err) throw new GeneralException(400, err);
+
+    try {
+      const expense = await this.expenseService.getExpenseById(Number(id));
+      if (!expense) throw new GeneralException(404, 'Expense not found');
+
+      const participants = await this.expenseService.getParticipantsByExpenseId(
+        Number(id),
+        query,
+      );
+
+      return participants;
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to getParticipantsByExpenseId: ${error}`);
       throw new GeneralException(500, 'Internal server error');
     }
   }
