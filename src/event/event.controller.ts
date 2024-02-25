@@ -4,61 +4,32 @@ import {
   Get,
   Logger,
   Param,
+  Patch,
   Post,
   UseInterceptors,
 } from '@nestjs/common';
-
-import validator from 'validator';
 
 import { GeneralException } from '~/common/exception';
 import { BaseResponseInterceptor } from '~/common/interceptors';
 
 import { EventService } from './event.service';
-import { EventPayload, ParticipateEventPayload } from './event.type';
+import { CreateEventPayload, ParticipateEventPayload } from './event.type';
+import { EventValidator } from './event.validator';
 
 @Controller('events')
 export class EventController {
   constructor(private readonly eventService: EventService) {}
 
   private readonly logger = new Logger('EventController');
+  private readonly validator = new EventValidator();
 
   @Post()
   @UseInterceptors(BaseResponseInterceptor)
-  async createEvent(@Body() body: EventPayload) {
-    const { name, start_date, end_date, creator_name } = body;
-
+  async createEvent(@Body() body: CreateEventPayload) {
     this.logger.log(`createEvent: ${JSON.stringify(body)}`);
 
-    if (
-      !name?.trim() ||
-      !start_date?.trim() ||
-      !end_date?.trim() ||
-      !creator_name?.trim()
-    ) {
-      const missingFields = [];
-      Object.entries({
-        name,
-        start_date,
-        end_date,
-        creator_name,
-      }).forEach(([key, value]) => !value?.trim() && missingFields.push(key));
-
-      throw new GeneralException(
-        400,
-        `Missing required fields (${missingFields.join(', ')})`,
-      );
-    }
-
-    if (!validator.isRFC3339(start_date) || !validator.isRFC3339(end_date)) {
-      throw new GeneralException(
-        400,
-        'Date must be in RFC3339 format (YYYY-MM-DDTHH:mm:ssZ)',
-      );
-    }
-
-    if (validator.isAfter(start_date, end_date)) {
-      throw new GeneralException(400, 'Start date cannot be after end date');
-    }
+    const err = this.validator.validateCreateEventPayload(body);
+    if (err) throw new GeneralException(400, err);
 
     try {
       const event = await this.eventService.createEvent(body);
@@ -83,6 +54,34 @@ export class EventController {
     } catch (error) {
       if (error instanceof GeneralException) throw error;
       this.logger.error(`Error to getEventBySlug: ${error}`);
+      throw new GeneralException(500, error.message);
+    }
+  }
+
+  @Patch(':id')
+  @UseInterceptors(BaseResponseInterceptor)
+  async updateEventById(
+    @Param('id') id: string,
+    @Body() body: CreateEventPayload,
+  ) {
+    this.logger.log(`updateEventById: ${JSON.stringify({ id, body })}`);
+
+    const err = this.validator.validateUpdateEventPayload(id, body);
+    if (err) throw new GeneralException(400, err);
+
+    try {
+      const event = await this.eventService.getEventById(Number(id));
+      if (!event) throw new GeneralException(404, 'Event not found');
+
+      const updatedEvent = await this.eventService.updateEventById(
+        Number(id),
+        body,
+      );
+
+      return updatedEvent;
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to updateEventById: ${error}`);
       throw new GeneralException(500, error.message);
     }
   }

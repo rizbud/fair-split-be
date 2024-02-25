@@ -3,7 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { toSlug } from '~/common/utils';
 import { PrismaService } from '~/prisma/prisma.service';
 
-import { EventPayload } from './event.type';
+import { CreateEventPayload, UpdateEventPayload } from './event.type';
 import { Event } from '@prisma/client';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class EventService {
 
   private readonly logger = new Logger('EventService');
 
-  async createEvent(payload: EventPayload) {
+  async createEvent(payload: CreateEventPayload) {
     this.logger.log(`createEvent: ${JSON.stringify(payload)}`);
 
     const { name, description, start_date, end_date, creator_name } = payload;
@@ -151,6 +151,21 @@ export class EventService {
       return event;
     } catch (error) {
       this.logger.error(`Error to getEventById.findUniqueEvent: ${error}`);
+      throw error;
+    }
+  }
+  async updateEventById(id: number, payload: UpdateEventPayload) {
+    this.logger.log(`updateEventById: ${JSON.stringify({ id, payload })}`);
+
+    try {
+      const event = await this.prismaService.event.update({
+        where: { id },
+        data: payload,
+      });
+
+      return event;
+    } catch (error) {
+      this.logger.error(`Error to updateEventById.updateEvent: ${error}`);
       throw error;
     }
   }
