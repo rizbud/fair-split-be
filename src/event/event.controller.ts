@@ -6,14 +6,22 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseInterceptors,
 } from '@nestjs/common';
 
 import { GeneralException } from '~/common/exception';
-import { BaseResponseInterceptor } from '~/common/interceptors';
+import {
+  BaseResponseInterceptor,
+  PaginatedResponseInterceptor,
+} from '~/common/interceptors';
 
 import { EventService } from './event.service';
-import { CreateEventPayload, ParticipateEventPayload } from './event.type';
+import {
+  CreateEventPayload,
+  GetEventParticipantsRequest,
+  ParticipateEventPayload,
+} from './event.type';
 import { EventValidator } from './event.validator';
 
 @Controller('events')
@@ -87,16 +95,21 @@ export class EventController {
   }
 
   @Get(':slug/participants')
-  @UseInterceptors(BaseResponseInterceptor)
-  async getEventParticipantsBySlug(@Param('slug') slug: string) {
+  @UseInterceptors(PaginatedResponseInterceptor)
+  async getEventParticipantsBySlug(
+    @Param('slug') slug: string,
+    @Query() query: GetEventParticipantsRequest,
+  ) {
     this.logger.log(`getEventParticipantsBySlug: ${slug}`);
 
     try {
+      const event = await this.eventService.getEventBySlug(slug);
+      if (!event) throw new GeneralException(404, 'Event not found');
+
       const participants = await this.eventService.getEventParticipantsBySlug(
         slug,
+        query,
       );
-      if (!participants.length)
-        throw new GeneralException(404, 'Event not found');
 
       return participants;
     } catch (error) {

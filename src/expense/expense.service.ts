@@ -273,6 +273,8 @@ export class ExpenseService {
           orderBy:
             sort_by === 'name'
               ? { participant: { name: order_by } }
+              : sort_by === 'created_at'
+              ? [{ [sort_by]: order_by }, { id: order_by }]
               : [{ [sort_by]: order_by }, { participant: { name: 'asc' } }],
         });
 

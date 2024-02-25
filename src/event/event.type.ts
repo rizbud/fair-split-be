@@ -1,3 +1,5 @@
+import { PaginationInput } from '~/common/interface';
+
 export interface CreateEventPayload {
   name: string;
   description?: string;
@@ -12,4 +14,8 @@ export type UpdateEventPayload = Partial<
 
 export interface ParticipateEventPayload {
   participant_name: string;
+}
+
+export interface GetEventParticipantsRequest extends PaginationInput {
+  sort_by?: 'name' | 'created_at';
 }

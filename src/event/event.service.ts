@@ -3,7 +3,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { toSlug } from '~/common/utils';
 import { PrismaService } from '~/prisma/prisma.service';
 
-import { CreateEventPayload, UpdateEventPayload } from './event.type';
+import {
+  CreateEventPayload,
+  GetEventParticipantsRequest,
+  UpdateEventPayload,
+} from './event.type';
 import { Event } from '@prisma/client';
 
 @Injectable()
@@ -78,20 +82,63 @@ export class EventService {
     }
   }
 
-  async getEventParticipantsBySlug(slug: string) {
+  async getEventParticipantsBySlug(
+    slug: string,
+    params: GetEventParticipantsRequest,
+  ) {
     this.logger.log(`getEventParticipantsBySlug: ${slug}`);
+
+    const sort_by = params.sort_by || 'name';
+    const order_by = params.order_by || 'asc';
+    const page = Number(params.page || 1);
+    const limit = Number(params.limit || 10);
+
+    let totalData = 0;
+    let totalPage = 1;
+
+    try {
+      totalData = await this.prismaService.eventParticipant.count({
+        where: { event: { slug } },
+      });
+
+      totalPage = Math.ceil(totalData / limit);
+    } catch (error) {
+      this.logger.error(
+        `Error to getEventParticipantsBySlug.countParticipants: ${error}`,
+      );
+      throw error;
+    }
 
     try {
       const eventParticipants =
         await this.prismaService.eventParticipant.findMany({
           where: { event: { slug } },
-          select: { participant: true, is_event_creator: true },
+          include: { participant: { select: { name: true } } },
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy:
+            sort_by === 'name'
+              ? { participant: { name: order_by } }
+              : [{ [sort_by]: order_by }, { id: order_by }],
         });
 
-      return eventParticipants.map((eventParticipant) => ({
+      const data = eventParticipants.map((eventParticipant) => ({
+        ...eventParticipant,
         ...eventParticipant.participant,
+        participant: undefined,
+        participant_id: undefined,
         is_event_creator: eventParticipant.is_event_creator,
       }));
+
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          totalData,
+          totalPage,
+        },
+      };
     } catch (error) {
       this.logger.error(
         `Error to getEventParticipantsBySlug.findEventParticipants: ${error}`,
