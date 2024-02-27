@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { getStorage, ref, uploadBytes } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, deleteObject } from 'firebase/storage';
 
 import { randomString } from '~/common/utils';
 
@@ -30,6 +30,24 @@ export class FirebaseService {
       return prefix + bucket + upload.metadata.fullPath;
     } catch (error) {
       this.logger.error(`Error to uploadFile.uploadBytes: ${error}`);
+      throw error;
+    }
+  }
+
+  async deleteFile(url: string) {
+    this.logger.log(`deleteFile: ${url}`);
+
+    const storage = getStorage();
+    const bucket = storage.app.options.storageBucket;
+    const storageRef = ref(
+      storage,
+      url.replace(`https://storage.googleapis.com/${bucket}/`, ''),
+    );
+
+    try {
+      await deleteObject(storageRef);
+    } catch (error) {
+      this.logger.error(`Error to deleteFile.deleteObject: ${error}`);
       throw error;
     }
   }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Logger,
   Param,
@@ -163,6 +164,30 @@ export class ExpenseController {
     }
   }
 
+  @Delete('/:id')
+  @UseInterceptors(BaseResponseInterceptor)
+  async deleteExpense(@Param('id') id: string) {
+    this.logger.log(`deleteExpense: ${id}`);
+
+    try {
+      const expense = await this.expenseService.getExpenseById(Number(id));
+      if (!expense) throw new GeneralException(404, 'Expense not found');
+
+      await Promise.allSettled([
+        ...expense.payment_proofs.map((p) =>
+          this.firebaseService.deleteFile(p.path),
+        ),
+        this.expenseService.deleteExpense(Number(id)),
+      ]);
+
+      return { message: 'Expense deleted' };
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to deleteExpense: ${error}`);
+      throw new GeneralException(500, 'Internal server error');
+    }
+  }
+
   @Post('/:id/payment_proofs')
   @UseInterceptors(
     FilesInterceptor('payment_proofs', 10, {
@@ -183,7 +208,10 @@ export class ExpenseController {
     this.logger.log(`uploadPaymentProofs: ${id}`);
 
     if (!payment_proofs || payment_proofs.length === 0) {
-      throw new GeneralException(400, 'Payment proofs is required');
+      throw new GeneralException(
+        400,
+        'Missing required fields (payment_proofs)',
+      );
     }
 
     try {
@@ -207,6 +235,47 @@ export class ExpenseController {
     } catch (error) {
       if (error instanceof GeneralException) throw error;
       this.logger.error(`Error to uploadPaymentProofs: ${error}`);
+      throw new GeneralException(500, 'Internal server error');
+    }
+  }
+
+  @Delete('/:id/payment_proofs')
+  @UseInterceptors(BaseResponseInterceptor)
+  async deletePaymentProof(
+    @Param('id') id: string,
+    @Body() body?: { payment_proofs_ids: Array<string> },
+  ) {
+    this.logger.log(`deletePaymentProof: ${JSON.stringify(body)}`);
+
+    const err = this.validator.validateDeleteExpensePayload(
+      body?.payment_proofs_ids,
+    );
+    if (err) throw new GeneralException(400, err);
+
+    try {
+      const expense = await this.expenseService.getExpenseById(Number(id));
+      if (!expense) throw new GeneralException(404, 'Expense not found');
+
+      const validPaymentProofs = expense.payment_proofs.filter((p) =>
+        body.payment_proofs_ids.includes(String(p.id)),
+      );
+      if (!validPaymentProofs.length) {
+        throw new GeneralException(400, 'payment_proofs_ids not found');
+      }
+
+      await Promise.allSettled([
+        ...validPaymentProofs.map((paymentProof) =>
+          this.firebaseService.deleteFile(paymentProof.path),
+        ),
+        this.expenseService.deletePaymentProofs(
+          validPaymentProofs.map((p) => p.id),
+        ),
+      ]);
+
+      return { message: 'Payment proofs deleted' };
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to deletePaymentProof: ${error}`);
       throw new GeneralException(500, 'Internal server error');
     }
   }

@@ -199,6 +199,16 @@ export class ExpenseValidator {
     }
   }
 
+  validateDeleteExpensePayload(payment_proofs_ids?: Array<string>) {
+    if (!payment_proofs_ids?.length) {
+      return 'Missing required fields (payment_proofs_ids)';
+    }
+
+    if (payment_proofs_ids?.some((id) => !validator.isUUID(id))) {
+      return 'Invalid payment_proofs_ids';
+    }
+  }
+
   private getTotalPercentage(participants: ExpenseParticipantsPayload[]) {
     return participants.reduce(
       (acc, curr) => acc + curr.amount_to_pay_percentage,

@@ -197,36 +197,13 @@ export class ExpenseService {
     }
   }
 
-  async addPaymentProofs(expenseId: number, paymentProofs: Array<string>) {
-    this.logger.log(`addPaymentProofs: ${expenseId}`);
+  async deleteExpense(expenseId: number) {
+    this.logger.log(`deleteExpense: ${expenseId}`);
 
     try {
-      return this.prismaService.paymentProof.createMany({
-        data: paymentProofs.map((path) => ({
-          path,
-          expense_id: expenseId,
-        })),
-        skipDuplicates: true,
-      });
+      return this.prismaService.expense.delete({ where: { id: expenseId } });
     } catch (error) {
-      this.logger.error(
-        `Error to addPaymentProofs.createManyPaymentProofs: ${error}`,
-      );
-      throw error;
-    }
-  }
-
-  async getPaymentProofsByExpenseId(expenseId: number) {
-    this.logger.log(`getPaymentProofs: ${expenseId}`);
-
-    try {
-      return this.prismaService.paymentProof.findMany({
-        where: { expense_id: expenseId },
-      });
-    } catch (error) {
-      this.logger.error(
-        `Error to getPaymentProofs.findManyPaymentProofs: ${error}`,
-      );
+      this.logger.error(`Error to deleteExpense.deleteExpense: ${error}`);
       throw error;
     }
   }
@@ -297,6 +274,55 @@ export class ExpenseService {
     } catch (error) {
       this.logger.error(
         `Error to getParticipantsByExpenseId.findManyExpenseParticipants: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async getPaymentProofsByExpenseId(expenseId: number) {
+    this.logger.log(`getPaymentProofs: ${expenseId}`);
+
+    try {
+      return this.prismaService.paymentProof.findMany({
+        where: { expense_id: expenseId },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error to getPaymentProofs.findManyPaymentProofs: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async addPaymentProofs(expenseId: number, paymentProofs: Array<string>) {
+    this.logger.log(`addPaymentProofs: ${expenseId}`);
+
+    try {
+      return this.prismaService.paymentProof.createMany({
+        data: paymentProofs.map((path) => ({
+          path,
+          expense_id: expenseId,
+        })),
+        skipDuplicates: true,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error to addPaymentProofs.createManyPaymentProofs: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async deletePaymentProofs(paymentProofIds: Array<string>) {
+    this.logger.log(`deletePaymentProofs: ${paymentProofIds}`);
+
+    try {
+      return this.prismaService.paymentProof.deleteMany({
+        where: { id: { in: paymentProofIds } },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error to deletePaymentProofs.deleteManyPaymentProofs: ${error}`,
       );
       throw error;
     }
