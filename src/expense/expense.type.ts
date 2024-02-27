@@ -39,3 +39,8 @@ export interface UpdateExpensePayload {
 export interface GetParticipantsByExpenseIdRequest extends PaginationInput {
   sort_by?: 'created_at' | 'name' | 'amount_to_pay';
 }
+
+export interface PayExpensePayload {
+  amount: number;
+  payment_proofs: Array<string>;
+}

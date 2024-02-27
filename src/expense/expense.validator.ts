@@ -154,6 +154,28 @@ export class ExpenseValidator {
     return undefined;
   }
 
+  validateGetParticipantsByExpenseIdQuery(
+    query: GetParticipantsByExpenseIdRequest,
+  ) {
+    const { page, limit, order_by, sort_by } = query || {};
+
+    if (page && isNaN(Number(page))) {
+      return 'page must be a number';
+    }
+
+    if (limit && isNaN(Number(limit))) {
+      return 'limit must be a number';
+    }
+
+    if (order_by && !ORDER_BY.includes(order_by)) {
+      return 'Invalid order_by query parameter in request';
+    }
+
+    if (sort_by && !PARTICIPANT_SORT_BY.includes(sort_by)) {
+      return 'Invalid sort_by query parameter in request';
+    }
+  }
+
   validateUpdateExpensePayload(id: string, payload: UpdateExpensePayload) {
     if (isNaN(Number(id))) return 'Expense ID must be a number';
 
@@ -177,28 +199,6 @@ export class ExpenseValidator {
     }
   }
 
-  validateGetParticipantsByExpenseIdQuery(
-    query: GetParticipantsByExpenseIdRequest,
-  ) {
-    const { page, limit, order_by, sort_by } = query || {};
-
-    if (page && isNaN(Number(page))) {
-      return 'page must be a number';
-    }
-
-    if (limit && isNaN(Number(limit))) {
-      return 'limit must be a number';
-    }
-
-    if (order_by && !ORDER_BY.includes(order_by)) {
-      return 'Invalid order_by query parameter in request';
-    }
-
-    if (sort_by && !PARTICIPANT_SORT_BY.includes(sort_by)) {
-      return 'Invalid sort_by query parameter in request';
-    }
-  }
-
   validateDeleteExpensePayload(payment_proofs_ids?: Array<string>) {
     if (!payment_proofs_ids?.length) {
       return 'Missing required fields (payment_proofs_ids)';
@@ -206,6 +206,43 @@ export class ExpenseValidator {
 
     if (payment_proofs_ids?.some((id) => !validator.isUUID(id))) {
       return 'Invalid payment_proofs_ids';
+    }
+  }
+
+  validatePayExpensePayload(
+    participant_id: string,
+    amount: number,
+    payment_proofs: Array<Express.Multer.File>,
+  ) {
+    if (!participant_id) {
+      return {
+        status: 401,
+        message: 'Missing required headers (participant_id)',
+      };
+    }
+
+    if (!validator.isUUID(participant_id)) {
+      return {
+        status: 400,
+        message: 'Invalid participant_id',
+      };
+    }
+
+    if (!amount || amount <= 0) {
+      return { status: 400, message: 'amount must be greater than 0' };
+    }
+
+    if (!payment_proofs?.length) {
+      return {
+        status: 400,
+        message: 'Missing required fields (payment_proofs)',
+      };
+    }
+  }
+
+  validateAddPaymentProofsPayload(payment_proofs: Array<Express.Multer.File>) {
+    if (!payment_proofs?.length) {
+      return 'Missing required fields (payment_proofs)';
     }
   }
 

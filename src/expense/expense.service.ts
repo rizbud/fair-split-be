@@ -7,6 +7,7 @@ import {
   CreateExpensePayload,
   GetExpensesByEventSlugRequest,
   GetParticipantsByExpenseIdRequest,
+  PayExpensePayload,
   UpdateExpensePayload,
 } from './expense.type';
 
@@ -274,6 +275,65 @@ export class ExpenseService {
     } catch (error) {
       this.logger.error(
         `Error to getParticipantsByExpenseId.findManyExpenseParticipants: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async checkParticipantExistence(
+    expenseId: number,
+    participantId: string,
+    amount: number,
+  ) {
+    this.logger.log(`checkParticipantExistence: ${participantId}`);
+
+    try {
+      return this.prismaService.expenseParticipant.findFirst({
+        where: {
+          expense_id: expenseId,
+          participant_id: participantId,
+          amount_to_pay: { gte: amount },
+        },
+        select: { id: true },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error to checkParticipantExistence.findFirstExpenseParticipant: ${error}`,
+      );
+      throw error;
+    }
+  }
+
+  async payExpense(id: number, payload: PayExpensePayload) {
+    this.logger.log(`payExpense: ${JSON.stringify({ id, payload })}`);
+
+    try {
+      const pay = await this.prismaService.expenseParticipant.update({
+        where: { id },
+        data: {
+          paid_amount: payload.amount,
+          amount_to_pay: { decrement: payload.amount },
+          paid_at: new Date().toISOString(),
+          payment_proofs: {
+            createMany: {
+              data: payload.payment_proofs.map((path) => ({ path })),
+            },
+          },
+        },
+        include: {
+          participant: { select: { name: true } },
+          payment_proofs: true,
+        },
+      });
+
+      return {
+        ...pay,
+        participant: undefined,
+        participant_id: undefined,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error to payExpense.updateExpenseParticipant: ${error}`,
       );
       throw error;
     }

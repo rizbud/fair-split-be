@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Logger,
   Param,
   Patch,
@@ -11,11 +12,11 @@ import {
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
 
 import { GeneralException } from '~/common/exception';
 import {
   BaseResponseInterceptor,
+  ImageFilesInterceptor,
   PaginatedResponseInterceptor,
 } from '~/common/interceptors';
 import { EventService } from '~/event/event.service';
@@ -164,6 +165,65 @@ export class ExpenseController {
     }
   }
 
+  @Post('/:id/pay')
+  @UseInterceptors(
+    ImageFilesInterceptor('payment_proofs'),
+    BaseResponseInterceptor,
+  )
+  async payExpense(
+    @Param('id') id: string,
+    @Headers('participant_id') participant_id: string,
+    @Body() body?: { amount: number },
+    @UploadedFiles() payment_proofs?: Array<Express.Multer.File>,
+  ) {
+    this.logger.log(
+      `payExpense: ${JSON.stringify({ id, participant_id, body })}`,
+    );
+
+    const err = this.validator.validatePayExpensePayload(
+      participant_id,
+      body?.amount,
+      payment_proofs,
+    );
+    if (err) throw new GeneralException(err.status, err.message);
+
+    try {
+      const expense = await this.expenseService.getExpenseById(Number(id));
+      if (!expense) throw new GeneralException(404, 'Expense not found');
+
+      const expenseParticipant =
+        await this.expenseService.checkParticipantExistence(
+          Number(id),
+          participant_id,
+          body.amount,
+        );
+      if (!expenseParticipant)
+        throw new GeneralException(
+          404,
+          'Participant not found or amount is greater than the remaining amount to pay',
+        );
+
+      const paymentProofs = await Promise.allSettled(
+        payment_proofs.map((file) =>
+          this.firebaseService.uploadFile('expense_participant', file),
+        ),
+      ).then((results) =>
+        results.map((result) => result.status === 'fulfilled' && result.value),
+      );
+
+      const updatedParticipant = await this.expenseService.payExpense(
+        expenseParticipant.id,
+        { amount: body.amount, payment_proofs: paymentProofs },
+      );
+
+      return updatedParticipant;
+    } catch (error) {
+      if (error instanceof GeneralException) throw error;
+      this.logger.error(`Error to payExpense: ${error}`);
+      throw new GeneralException(500, 'Internal server error');
+    }
+  }
+
   @Delete('/:id')
   @UseInterceptors(BaseResponseInterceptor)
   async deleteExpense(@Param('id') id: string) {
@@ -190,15 +250,7 @@ export class ExpenseController {
 
   @Post('/:id/payment_proofs')
   @UseInterceptors(
-    FilesInterceptor('payment_proofs', 10, {
-      limits: { fileSize: 1024 * 1024 * 2 }, // 2MB
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|pdf)$/)) {
-          return cb(new GeneralException(400, 'Invalid file type'), false);
-        }
-        cb(null, true);
-      },
-    }),
+    ImageFilesInterceptor('payment_proofs'),
     BaseResponseInterceptor,
   )
   async uploadPaymentProofs(
@@ -207,12 +259,8 @@ export class ExpenseController {
   ) {
     this.logger.log(`uploadPaymentProofs: ${id}`);
 
-    if (!payment_proofs || payment_proofs.length === 0) {
-      throw new GeneralException(
-        400,
-        'Missing required fields (payment_proofs)',
-      );
-    }
+    const err = this.validator.validateAddPaymentProofsPayload(payment_proofs);
+    if (err) throw new GeneralException(400, err);
 
     try {
       const expense = await this.expenseService.getExpenseById(Number(id));
